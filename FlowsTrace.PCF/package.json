@@ -1,0 +1,46 @@
+{
+  "name": "flowstrace-pcf",
+  "version": "1.0.0",
+  "description": "Flows Trace PCF",
+  "scripts": {
+    "build": "pcf-scripts build",
+    "clean": "pcf-scripts clean",
+    "lint": "pcf-scripts lint",
+    "lint:fix": "pcf-scripts lint fix",
+    "rebuild": "pcf-scripts rebuild",
+    "start": "pcf-scripts start",
+    "start:watch": "pcf-scripts start watch",
+    "refreshTypes": "pcf-scripts refreshTypes"
+  },
+  "dependencies": {
+    "@fluentui/react": "8.29.0",
+    "@fluentui/react-components": "^9.57.0",
+    "@supercharge/promise-pool": "^3.2.0",
+    "azure-maps-control": "^3.5.0",
+    "react": "^17.0.2",
+    "react-azure-maps": "^1.0.2",
+    "react-dom": "^17.0.2",
+    "react-icons": "^4.12.0",
+    "react-responsive": "^10.0.0"
+  },
+  "devDependencies": {
+    "@microsoft/eslint-plugin-power-apps": "^0.2.33",
+    "@types/node": "^18.19.31",
+    "@types/powerapps-component-framework": "^1.3.11",
+    "@types/react": "^16.14.60",
+    "@types/react-dom": "^16.9.24",
+    "@typescript-eslint/eslint-plugin": "^7.7.1",
+    "@typescript-eslint/parser": "^7.7.1",
+    "css-loader": "^7.1.2",
+    "eslint": "^8.57.0",
+    "eslint-plugin-import": "^2.29.1",
+    "eslint-plugin-node": "^11.1.0",
+    "eslint-plugin-promise": "^6.1.1",
+    "eslint-plugin-react": "^7.34.1",
+    "pcf-scripts": "^1",
+    "pcf-start": "^1",
+    "react": "^17.0.2",
+    "style-loader": "^4.0.0",
+    "typescript": "^4.9.5"
+  }
+}

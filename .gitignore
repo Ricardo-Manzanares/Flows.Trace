@@ -1,0 +1,9 @@
+#PCF
+node_modules/
+out/
+
+#NET
+.vs/
+bin/
+obj/
+packages/

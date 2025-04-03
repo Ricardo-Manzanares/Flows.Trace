@@ -1,0 +1,34 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.12.35514.174
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FlowsTrace.API", "FlowsTrace.API\FlowsTrace.API.csproj", "{D34472E3-9101-4E2D-A3CB-63240DFDC543}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FlowsTrace.Test", "FlowsTrace.Test\FlowsTrace.Test.csproj", "{F4EF7E67-2A94-496C-B101-35423C65C516}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FlowsTrace.Core", "FlowsTrace.Core\FlowsTrace.Core.csproj", "{F217ECB5-ECAB-40E0-AAF1-F19BEC37734E}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{D34472E3-9101-4E2D-A3CB-63240DFDC543}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D34472E3-9101-4E2D-A3CB-63240DFDC543}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D34472E3-9101-4E2D-A3CB-63240DFDC543}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D34472E3-9101-4E2D-A3CB-63240DFDC543}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F4EF7E67-2A94-496C-B101-35423C65C516}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F4EF7E67-2A94-496C-B101-35423C65C516}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F4EF7E67-2A94-496C-B101-35423C65C516}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F4EF7E67-2A94-496C-B101-35423C65C516}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F217ECB5-ECAB-40E0-AAF1-F19BEC37734E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F217ECB5-ECAB-40E0-AAF1-F19BEC37734E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F217ECB5-ECAB-40E0-AAF1-F19BEC37734E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F217ECB5-ECAB-40E0-AAF1-F19BEC37734E}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
