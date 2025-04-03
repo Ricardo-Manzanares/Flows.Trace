@@ -1,20 +1,28 @@
+
+**Flows Trace PCF**
+---------------
+
 🚀 Flows Trace – Optimize the tracing of your flows in Power Platform! 🔍
 
 💡 What is Flows Trace?
 It's a powerful PCF tool designed to give you complete traceability of cloud flows in Power Automate, allowing you to accurately analyze every execution that affects a record in Dataverse.
 
 ✨Highlighted Features:
-✅ Detailed tracing of executed flows, such as triggers or internal actions.
+
+✅ Detailed tracking of flows where the record has been executed as triggers or in internal actions.
+
 ✅ Multilingual support with translation into 38 languages. 🌍
+
 ✅ Flexible pagination: Display 5, 10, 50, or 100 records per page.
+
 ✅ Advanced sorting: Filter executions in ascending or descending order by multiple columns.
+
 ✅ Quick access: Open and examine any execution within the Power Platform environment.
+
 ✅ History Optimization: Review runs up to a week ago, respecting the 28-day storage limit in Microsoft Flow.
 
 🔗 Discover Flows Trace now and take your flow analysis to the next level!
 
-**PCF Flows Trace**
----------------
 #### Demo
 ![Vc0WgbdyZp](https://github.com/user-attachments/assets/f1115f8a-a75c-4376-965f-3b1ad7cfd3d5)
 
