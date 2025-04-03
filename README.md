@@ -44,7 +44,9 @@ It's a powerful PCF tool designed to give you complete traceability of cloud flo
 - Configure the following environment variables for connecting the Custom API to the Flow API:
 ![image](https://github.com/user-attachments/assets/a803c371-f2bb-4cd2-94b7-2007c67edfd2)
 
+
 **_The application user configured for the connection in the environment must have at least the following roles:_**
+
 ![image](https://github.com/user-attachments/assets/4b38e893-9098-4622-9584-04c3e1d7a16a)
 
 
@@ -52,6 +54,7 @@ It's a powerful PCF tool designed to give you complete traceability of cloud flo
 ---------------
 
 - Add the control to a form for any entity for which you want to obtain the executions of an associated record.
+
 ![image](https://github.com/user-attachments/assets/72016468-862b-4254-a054-997cdb94285f)
 
 **_You need to associate a property of a String field (TextField), such as the Record Name field or another field from the entity, to configure the control (no updates are made to this field in the PCF)._**
