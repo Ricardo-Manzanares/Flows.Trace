@@ -36,7 +36,8 @@ It's a powerful PCF tool designed to give you complete traceability of cloud flo
 
 - Download and install the Data Verse solution in your environment where you want to use the PCF.
 
-[FlowsTrace_1_0_0_0.zip](https://github.com/user-attachments/files/19592593/FlowsTrace_1_0_0_0.zip)
+[FlowsTrace_1_0_0_0_managed.zip](https://github.com/user-attachments/files/21679052/FlowsTrace_1_0_0_0_managed.zip)
+
 
 **Connection Configuration**
 ---------------
