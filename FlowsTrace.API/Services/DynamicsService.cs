@@ -31,9 +31,9 @@ namespace FlowsTrace.Services.API
                     FilterOperator = LogicalOperator.Or,
                     Conditions =
                     {
-                        new ConditionExpression("schemaname", ConditionOperator.Equal, "axa_flowstraceclientid"),
-                        new ConditionExpression("schemaname", ConditionOperator.Equal, "axa_flowstracetenantid"),
-                        new ConditionExpression("schemaname", ConditionOperator.Equal, "axa_flowstracesecretid")
+                        new ConditionExpression("schemaname", ConditionOperator.Equal, "rmc_flowstraceclientid"),
+                        new ConditionExpression("schemaname", ConditionOperator.Equal, "rmc_flowstracetenantid"),
+                        new ConditionExpression("schemaname", ConditionOperator.Equal, "rmc_flowstracesecretid")
                     }
                 }
                 };
@@ -43,11 +43,11 @@ namespace FlowsTrace.Services.API
                 {
                     foreach (var environmentValue in environmentValuesResponse.Entities)
                     {
-                        if (environmentValue["schemaname"].ToString() == "axa_flowstraceclientid")
+                        if (environmentValue["schemaname"].ToString() == "rmc_flowstraceclientid")
                             environmentsValues.client_id = environmentValue["defaultvalue"].ToString();
-                        if (environmentValue["schemaname"].ToString() == "axa_flowstracesecretid")
+                        if (environmentValue["schemaname"].ToString() == "rmc_flowstracesecretid")
                             environmentsValues.client_secret = environmentValue["defaultvalue"].ToString();
-                        if (environmentValue["schemaname"].ToString() == "axa_flowstracetenantid")
+                        if (environmentValue["schemaname"].ToString() == "rmc_flowstracetenantid")
                             environmentsValues.tenant_id = environmentValue["defaultvalue"].ToString();
                     }
                 }

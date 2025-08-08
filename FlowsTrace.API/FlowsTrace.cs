@@ -12,8 +12,8 @@ namespace FlowsTrace.API
 {
     public class FlowsTrace : IPlugin
     {
-        const string parameterInputName = "axa_flowstracerequest";
-        const string parameterOutputName = "axa_flowstraceresponse";
+        const string parameterInputName = "rmc_flowstracerequest";
+        const string parameterOutputName = "rmc_flowstraceresponse";
 
         IPluginExecutionContext _context;
         IOrganizationServiceFactory _serviceFactory;

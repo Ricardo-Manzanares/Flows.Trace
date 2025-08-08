@@ -8,6 +8,6 @@ namespace FlowsTrace.API.Utils
 {
     internal class FlowsTraceResponse
     {
-        public string axa_flowstraceresponse { get; set; }
+        public string rmc_flowstraceresponse { get; set; }
     }
 }

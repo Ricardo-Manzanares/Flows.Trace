@@ -9,9 +9,9 @@ namespace FlowsTrace.API.Utils
         {
             ex = null;
 
-            if (context.PrimaryEntityName == "none" && context.MessageName != "axa_flowstrace")
+            if (context.PrimaryEntityName == "none" && context.MessageName != "rmc_flowstrace")
             {
-                ex = new Exception("The Custom API only execute from messageName axa_flowstrace");
+                ex = new Exception("The Custom API only execute from messageName rmc_flowstrace");
             }
 
             return ex == null;

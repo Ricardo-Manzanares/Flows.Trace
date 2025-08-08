@@ -30,19 +30,19 @@ export const getFlowsTrace = async (webAPI: ComponentFramework.WebApi, recordId 
         
         var flwsTraceRequest = new class {
  
-            axa_flowstracerequest = "{'record_id' : '"+recordId+"', 'filter_range_execution' : '"+filterExecutions+"'}";
+            rmc_flowstracerequest = "{'record_id' : '"+recordId+"', 'filter_range_execution' : '"+filterExecutions+"'}";
          
             getMetadata(): any {
                 return {
                     parameterTypes: {
          
-                        axa_flowstracerequest: {
+                        rmc_flowstracerequest: {
                             typeName: "Edm.String",
                             structuralProperty: 1
                         }
                     },
                     operationType: 0,
-                    operationName: "axa_flowstrace"
+                    operationName: "rmc_flowstrace"
                 };
             }
         }();
@@ -55,7 +55,7 @@ export const getFlowsTrace = async (webAPI: ComponentFramework.WebApi, recordId 
             if (response.ok)           
             {           
                 let data = await response.json();           
-                return JSON.parse(data.axa_flowstraceresponse);
+                return JSON.parse(data.rmc_flowstraceresponse);
             }else{            
                 return '';           
             }        
