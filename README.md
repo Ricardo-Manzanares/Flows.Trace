@@ -36,7 +36,8 @@ It's a powerful PCF tool designed to give you complete traceability of cloud flo
 
 - Download and install the Data Verse solution in your environment where you want to use the PCF.
 
-[FlowsTrace_1_0_0_0.zip](https://github.com/user-attachments/files/19592593/FlowsTrace_1_0_0_0.zip)
+[FlowsTrace_1_0_0_0_managed.zip](https://github.com/user-attachments/files/21679052/FlowsTrace_1_0_0_0_managed.zip)
+
 
 **Connection Configuration**
 ---------------
@@ -49,6 +50,19 @@ It's a powerful PCF tool designed to give you complete traceability of cloud flo
 
 ![image](https://github.com/user-attachments/assets/4b38e893-9098-4622-9584-04c3e1d7a16a)
 
+**App Registration in Azure or Entra ID**
+---------------
+The step-by-step guide for registering an application can be found at the following Microsoft documentation link:
+https://learn.microsoft.com/en-us/entra/identity-platform/quickstart-register-app#register-an-application
+
+Steps 1 through 6
+
+Once the application is created, you must add the following permission: Power Automate
+Flows.Manage.All
+
+The steps to add this permission can be found in the following guide:
+
+https://learn.microsoft.com/en-us/entra/identity-platform/quickstart-configure-app-access-web-apis#add-permissions-to-access-your-web-api
 
 **PCF Configuration**
 ---------------
