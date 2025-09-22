@@ -1,9 +1,12 @@
 #PCF
 node_modules/
 out/
+.env
+.npmrc
 
 #NET
 .vs/
 bin/
 obj/
 packages/
+*.json

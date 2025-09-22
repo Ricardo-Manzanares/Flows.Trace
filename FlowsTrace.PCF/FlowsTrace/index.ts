@@ -34,7 +34,25 @@ export class FlowsTrace implements ComponentFramework.ReactControl<IInputs, IOut
      * @returns ReactElement root react element for the control
      */
     public updateView(context: ComponentFramework.Context<IInputs>): React.ReactElement {
-        const props: IFlowsTraceComponent = { webAPI: context.webAPI, recordId: (<any>context).page.entityId ?? "",  userSettings: context.userSettings };
+        var _api : ComponentFramework.WebApi;
+        var _userSettings, _recordId, _entityName;
+
+        if(document.location.host.includes('localhost')) { 
+            const { WebApiProxy } = require("@ricardo-manzanares/pcf-proxy-dynamics");
+            _api = new WebApiProxy("http://localhost:3001");
+            _userSettings = {} as ComponentFramework.UserSettings;
+            _userSettings.userId = "82fb0ac7-1bb7-ee11-a569-0022489c9f89"; // Mock user ID for local testing
+            _recordId = "14000e87-6210-f011-998a-6045bde0eb12";
+            _entityName = "";
+        }else{
+            _api = context.webAPI;
+            _userSettings = context.userSettings;
+            _userSettings.userId = (<any>_userSettings).userId;
+            _recordId = (<any>context).page.entityId.replace("{", "").replace("}", "") ?? "";
+            _entityName = (<any>context).page.entityTypeName ?? "";
+        }
+
+        const props: IFlowsTraceComponent = { webAPI: _api, recordId: _recordId, userSettings: _userSettings };
         return React.createElement(
             FlowsTraceComponent, props
         );

@@ -43,7 +43,7 @@ foreach (var flow in flows)
 
 
 var flowService = new FlowService(configuration["environment_url"].ToString(), configuration["environment_id"].ToString(), configuration["client_id"].ToString(), configuration["client_secret"].ToString(), configuration["tenant_id"].ToString(), null);
-Enums.FilterRangeExecution filter = Enums.FilterRangeExecution.SinceLastWeek;
+Enums.FilterRangeExecution filter = Enums.FilterRangeExecution.Today;
 
 Console.WriteLine("Filter apply " + filter.ToString());
 

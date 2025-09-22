@@ -1,6 +1,5 @@
 ﻿using FlowsTrace.API.Models;
 using FlowsTrace.API.Models.Flow;
-using FlowsTrace.API.Utils;
 using FlowsTrace.Services.API;
 using Microsoft.Xrm.Sdk;
 using Newtonsoft.Json;
@@ -63,28 +62,28 @@ namespace FlowsTrace.API.Services
                     
                     var parallelOptions = new ParallelOptions { MaxDegreeOfParallelism = 2 };
 
-                    var filterYesterdateStart = string.Empty;
-                    var filterYesterdateEnd = DateTime.Now.ToLocalTime().ToString("yyyy-MM-ddTHH:mm:ssZ");
+                    var filterFrom = string.Empty;
+                    var filterEnd = DateTime.Now.ToLocalTime().ToString("yyyy-MM-ddTHH:mm:ssZ");
 
                     switch (filterRangeExecution)
                     {
                         case FilterRangeExecution.LastHalfHour:
-                            filterYesterdateStart = DateTime.Now.ToLocalTime().AddMinutes(-30).ToString("yyyy-MM-ddTHH:mm:ssZ");
+                            filterFrom = DateTime.Now.ToLocalTime().AddMinutes(-30).ToString("yyyy-MM-ddTHH:mm:ssZ");
                             break;
                         case FilterRangeExecution.LastHour:
-                            filterYesterdateStart = DateTime.Now.ToLocalTime().AddMinutes(-60).ToString("yyyy-MM-ddTHH:mm:ssZ");
+                            filterFrom = DateTime.Now.ToLocalTime().AddMinutes(-60).ToString("yyyy-MM-ddTHH:mm:ssZ");
                             break;
                         case FilterRangeExecution.Today:
-                            filterYesterdateStart = DateTime.Now.ToLocalTime().ToString("yyyy-MM-ddT00:00:00Z");
+                            filterFrom = DateTime.Now.ToLocalTime().ToString("yyyy-MM-ddT00:00:00Z");
                             break;
                         case FilterRangeExecution.Yesterday:
-                            filterYesterdateStart = DateTime.Now.ToLocalTime().AddDays(-1).ToString("yyyy-MM-ddT00:00:00Z");
+                            filterFrom = DateTime.Now.ToLocalTime().AddDays(-1).ToString("yyyy-MM-ddT00:00:00Z");
                             break;
                         case FilterRangeExecution.Last48Hours:
-                            filterYesterdateStart = DateTime.Now.ToLocalTime().AddDays(-2).ToString("yyyy-MM-ddT00:00:00Z");
+                            filterFrom = DateTime.Now.ToLocalTime().AddDays(-2).ToString("yyyy-MM-ddT00:00:00Z");
                             break;
                         case FilterRangeExecution.SinceLastWeek:
-                            filterYesterdateStart = DateTime.Now.ToLocalTime().AddDays(-7).ToString("yyyy-MM-ddT00:00:00Z");
+                            filterFrom = DateTime.Now.ToLocalTime().AddDays(-7).ToString("yyyy-MM-ddT00:00:00Z");
                             break;
                         default:
                             throw new InvalidEnumArgumentException("DynamicsService - GetFlowsFromRecord : FilterRangeExecution not valid");
@@ -94,7 +93,7 @@ namespace FlowsTrace.API.Services
                     Parallel.ForEach(flows, parallelOptions, flow =>
                     {
                         var client = new HttpClient();
-                        var runsFlowRequest = new HttpRequestMessage(HttpMethod.Get, string.Format("{0}/{1}/flows/{2}/runs?$filter=starTtime ge {3} and startTime le {4}", _pathRuns, _environment_id, flow.Id, filterYesterdateStart, filterYesterdateEnd));
+                        var runsFlowRequest = new HttpRequestMessage(HttpMethod.Get, string.Format("{0}/{1}/flows/{2}/runs?$filter=starTtime ge {3} and startTime le {4}", _pathRuns, _environment_id, flow.Id, filterFrom, filterEnd));
                         runsFlowRequest.Headers.Add("Authorization", "Bearer " + _token.access_token);
                         var runsFlowResponse = client.SendAsync(runsFlowRequest).Result;
                         if (runsFlowResponse.StatusCode == HttpStatusCode.OK)
@@ -177,11 +176,49 @@ namespace FlowsTrace.API.Services
                 {
                     var jsonObject = JObject.Load(jsonReader);
 
-                    foreach (var node in new List<string> { "body", "parameters", "value" })
+                    foreach (var node in new List<string> { "headers", "body", "parameters", "value", "variables" })
                     {
                         if (jsonObject[node] != null && properties == null)
                         {
-                            properties = jsonObject[node].Children().ToList();
+                            switch (node)
+                            {
+                                case "headers":
+                                    if(actionName == null)
+                                    {
+                                        //Example :     "x-ms-ppapi-forwarded-path": "/powerautomate/automations/direct/workflows/89a57fcf85824377a6a1fbf0e14dcb96/triggers/Campo_de_comunicaci%C3%B3n/versions/08584445499516133574/run",
+                                        var pathAction = jsonObject[node].Children().ToList().Where(h => h.Path == "headers.x-ms-ppapi-forwarded-path").FirstOrDefault();
+                                        if(pathAction != null)
+                                        {
+                                            //Decode path 7th position is action name
+                                            actionName = WebUtility.UrlDecode(pathAction.ToString()).Split('/')[7];
+
+                                            if (actionName != null)
+                                            {
+                                                FlowTraceResponse flowNew = new FlowTraceResponse();
+                                                flowNew.Status = flow.Status;
+                                                flowNew.Id = flow.Id;
+                                                flowNew.WorkflowId = flow.WorkflowId;
+                                                flowNew.Name = flow.Name;
+                                                flowNew.DateExecution = run.properties.startTime;
+
+                                                flowNew.RunStatus = Enum.TryParse(run.properties.status, out FlowRunStatus statusRunFlow) ? statusRunFlow : FlowRunStatus.Unknown;
+                                                flowNew.RunId = run.id.Replace(_pathRunIdReplace, _environmentRunIdReplace);
+                                                flowNew.RunName = run.name;
+                                                flowNew.Action = actionName;
+                                                flowNew.ActionStatus = FlowRunStatus.Succeeded;
+                                                flowNew.DateExecution = run.properties.startTime;
+                                                flowsResult.Add(flowNew);
+                                            }
+                                        }
+                                    }
+                                    break;
+                                case "variables":
+                                    properties = FilterProperties(jsonObject[node].Children().ToList().Children().ToList());
+                                    break;
+                                default:
+                                    properties = FilterProperties(jsonObject[node].Children().ToList());
+                                    break;
+                            }
                         }
                     }
                 }
@@ -224,6 +261,43 @@ namespace FlowsTrace.API.Services
                     }
                 }
             }
+        }
+        private IEnumerable<dynamic> FilterProperties(IEnumerable<dynamic> properties)
+        {
+            // List of proerties to exclude from the results
+            var excludedProperties = new HashSet<string>
+           {
+                "accept",
+                "entityName",
+                "@odata.context",
+                "@odata.etag",
+                "@OData.Community.Display.V1.FormattedValue",
+                "merged",
+                "schema",
+                "contentVersion",
+                "defaultValue",
+                "metadata",
+                "kind",
+                "connection",
+                "connectionReferenceKey",
+                "operationId",
+                "api",
+                "apiVersion",
+                "authentication",
+                "createdon@OData.Community.Display.V1.FormattedValue",
+                "createdon",
+                "modifiedon@OData.Community.Display.V1.FormattedValue",
+                "modifiedon",
+                "statecode@OData.Community.Display.V1.FormattedValue",
+                "statecode",
+                "_modifiedby_value@Microsoft.Dynamics.CRM.lookuplogicalname",
+                "_modifiedby_type",
+                "name",
+                "type"
+           };
+
+            // Filter properties based on the excluded list
+            return properties.Where(property => property != null && !excludedProperties.Contains(property.Name)).ToList();
         }
     }
 }

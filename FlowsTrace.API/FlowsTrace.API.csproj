@@ -111,9 +111,6 @@
     <Compile Include="Services\AuthenticationService.cs" />
     <Compile Include="Services\DynamicsService.cs" />
     <Compile Include="Services\FlowService.cs" />
-    <Compile Include="Utils\FlowsTraceRequest.cs" />
-    <Compile Include="Utils\FlowsTraceResponse.cs" />
-    <Compile Include="Utils\FlowsTraceUtils.cs" />
     <Compile Include="FlowsTrace.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

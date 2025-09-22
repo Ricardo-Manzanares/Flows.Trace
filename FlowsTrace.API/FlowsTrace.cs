@@ -1,6 +1,5 @@
 ﻿using FlowsTrace.API.Models;
 using FlowsTrace.API.Services;
-using FlowsTrace.API.Utils;
 using FlowsTrace.Services.API;
 using Microsoft.Crm.Sdk.Messages;
 using Microsoft.Xrm.Sdk;
@@ -32,11 +31,6 @@ namespace FlowsTrace.API
             try
             {
                 _tracingService.Trace("FlowsTrace init");
-
-                if (!FlowsTraceUtils.ValidationExecutionCustomAPI(_context, out Exception ex))
-                {
-                    throw new Exception(ex.Message);
-                }
 
                 if (!_context.InputParameters.ContainsKey(parameterInputName))
                 {

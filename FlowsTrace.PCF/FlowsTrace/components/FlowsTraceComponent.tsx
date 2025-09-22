@@ -118,28 +118,7 @@ export const FlowsTraceComponent : React.FunctionComponent<IFlowsTraceComponent>
   const LoadFlows = async (filterExecution : FilterExecutions) => {
     let flowsResponse : IDataFlowTraceResponse = { error: true, message: "", data: [] };
     try{
-      if(document.location.host.includes('localhost')) {
-        return new Promise<IDataFlowTraceResponse>((resolve, reject) => {
-          resolve({
-            error: false,
-            message: "",
-            data: Array.from({ length: 50 }, (_, index) => ({
-              Id: `id-${index}`,
-              WorkflowId: `workflow-${index}`,
-              Name: `Update contact ${index}`,
-              Action: `Actualizar_contacto_${index}`,
-              ActionStatus: index % 2,
-              Status: index % 3,
-              DateExecution: new Date().toISOString(),
-              RunStatus: index % 2,
-              RunId: `https://make.powerautomate.com/environments/env-${index}/flows/flow-${index}/runs/run-${index}`,
-              RunName: `run-${index}`
-            }))
-          });
-        })
-      }else{
-        flowsResponse = await getFlowsTrace(props.webAPI, props.recordId, filterExecution)
-      }
+      flowsResponse = await getFlowsTrace(props.webAPI, props.recordId, filterExecution)
     }catch(error){
       console.error(error);
     }
@@ -190,7 +169,7 @@ export const FlowsTraceComponent : React.FunctionComponent<IFlowsTraceComponent>
       if (aValue > bValue) return sortDirection === "asc" ? 1 : -1;
       return 0;
     });
-  }, [sortColumn, sortDirection, paginatedData]);
+  }, [recordsPerPage, sortColumn, sortDirection, paginatedData]);
 
   // Handle column header click
   const handleSort = (column: string) => {
@@ -269,7 +248,7 @@ export const FlowsTraceComponent : React.FunctionComponent<IFlowsTraceComponent>
                 freeform={false}
                 readOnly={true}
                 className={[style.noCaret, style.pointer].join(" ")}
-                onOptionSelect={(event, data) => setRecordsPerPage(Number(data.optionValue))}
+                onOptionSelect={(event, data) => (setRecordsPerPage(Number(data.optionValue)), setCurrentPage(1))} // Reset to first page on change
               >
                 <Option value="5">5</Option>
                 <Option value="10">10</Option>
@@ -312,7 +291,7 @@ export const FlowsTraceComponent : React.FunctionComponent<IFlowsTraceComponent>
             </TableHeader>
             <TableBody>
               {(sortedData ?? []).map((flow) => (
-                <TableRow key={flow.Id}>
+                <TableRow key={flow.Id_+Math.random().toString(36).substring(2, 15)}>
                   <TableCell>
                     <TableCellLayout className={style.noCaret}>{flow.RunName}</TableCellLayout>
                   </TableCell>
