@@ -1,6 +1,7 @@
 
 **Flows Trace PCF**
 ---------------
+<img width="320" height="320" alt="image" src="https://github.com/user-attachments/assets/9ac773ec-9a7e-419c-9f54-752a185f5636" />
 
 🚀 Flows Trace – Optimize the tracing of your flows in Power Platform! 🔍
 
