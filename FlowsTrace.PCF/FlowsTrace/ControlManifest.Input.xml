@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <manifest>
-  <control namespace="FT" constructor="FlowsTrace" version="0.0.17" display-name-key="FlowsTrace" description-key="FlowsTrace description v0.17" control-type="virtual" >
+  <control namespace="FT" constructor="FlowsTrace" version="1.0.0" display-name-key="FlowsTrace" description-key="FlowsTrace description v1.0" control-type="virtual" >
     <external-service-usage enabled="false">
     </external-service-usage>
     <property name="nameRecord" display-name-key="nameRecord" description-key="Name from record" of-type="SingleLine.Text" usage="bound" required="true" />
