@@ -56,6 +56,12 @@ const useStyles = makeStyles({
   },
   pointer:{
     cursor: "pointer",
+  },
+  groupBackground1: {
+    backgroundColor: "rgba(0, 120, 212, 0.50)", // Light blue background
+  },
+  groupBackground2: {
+    backgroundColor: "rgba(255, 255, 255, 0)", // Default/transparent background
   }
 });
 
@@ -170,6 +176,26 @@ export const FlowsTraceComponent : React.FunctionComponent<IFlowsTraceComponent>
       return 0;
     });
   }, [recordsPerPage, sortColumn, sortDirection, paginatedData]);
+
+  // Group rows by RunName for alternating background colors
+  const getRowBackgroundClass = React.useMemo(() => {
+    if (!sortedData) return () => style.groupBackground2;
+    
+    const runNameGroups: { [key: string]: number } = {};
+    let groupIndex = 0;
+    
+    sortedData.forEach((flow) => {
+      if (!(flow.RunName in runNameGroups)) {
+        runNameGroups[flow.RunName] = groupIndex % 2;
+        groupIndex++;
+      }
+    });
+    
+    return (runName: string) => {
+      const groupNumber = runNameGroups[runName];
+      return groupNumber === 0 ? style.groupBackground1 : style.groupBackground2;
+    };
+  }, [sortedData, style.groupBackground1, style.groupBackground2]);
 
   // Handle column header click
   const handleSort = (column: string) => {
@@ -291,7 +317,7 @@ export const FlowsTraceComponent : React.FunctionComponent<IFlowsTraceComponent>
             </TableHeader>
             <TableBody>
               {(sortedData ?? []).map((flow) => (
-                <TableRow key={flow.Id_+Math.random().toString(36).substring(2, 15)}>
+                <TableRow key={flow.Id_+Math.random().toString(36).substring(2, 15)} className={getRowBackgroundClass(flow.RunName)}>
                   <TableCell>
                     <TableCellLayout className={style.noCaret}>{flow.RunName}</TableCellLayout>
                   </TableCell>
