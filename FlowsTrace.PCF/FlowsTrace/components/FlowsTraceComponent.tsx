@@ -102,6 +102,7 @@ export const FlowsTraceComponent : React.FunctionComponent<IFlowsTraceComponent>
   const [currentPage, setCurrentPage] = React.useState(1);
   const [sortColumn, setSortColumn] = React.useState<string | null>("RunName"); // Default to DateExecution
   const [sortDirection, setSortDirection] = React.useState<"asc" | "desc">("desc");// Default to descending order
+  const [sortFieldType, setSortFieldType] = React.useState<"string" | "date" | "number">("string");
   const [loadingMessage, setLoadingMessage] = React.useState(messagesLoading[0]); // Default message
   const [loadingMessageStatus, setLoadingMessageStatus] = React.useState<"none" | "error" | "warning" | "success">("none"); // Default message
   const [loadingMessageProgressBar, setLoadingMessageProgressBar] = React.useState<"error" | "warning" | "success">(); // Default message
@@ -146,8 +147,105 @@ export const FlowsTraceComponent : React.FunctionComponent<IFlowsTraceComponent>
     setLoading(true);
   }
 
+  // Helper function to parse date strings correctly
+  const parseDate = React.useCallback((dateValue: any): Date => {
+    if (dateValue instanceof Date) {
+      return dateValue;
+    }
+    
+    if (dateValue === null || dateValue === undefined) {
+      console.warn('Null/undefined date value, using current date');
+      return new Date();
+    }
+    
+    const dateStr = String(dateValue).trim();
+    
+    if (!dateStr) {
+      console.warn('Empty date string, using current date');
+      return new Date();
+    }
+    
+    // Try parsing as ISO date string (e.g., "2025-09-24T14:05:46.8629359Z")
+    try {
+      const parsedDate = new Date(dateStr);
+      if (!isNaN(parsedDate.getTime())) {
+        return parsedDate;
+      }
+    } catch (error) {
+      console.warn('Error parsing ISO date:', dateStr, error);
+    }
+    
+    // Handle DD/MM/YYYY HH:mm:ss format as fallback (in case data comes formatted)
+    const ddmmyyyyRegex = /^(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{1,2}):(\d{1,2})$/;
+    const match = dateStr.match(ddmmyyyyRegex);
+    
+    if (match) {
+      try {
+        const [, day, month, year, hour, minute, second] = match;
+        // Month is 0-indexed in JavaScript Date constructor
+        const result = new Date(parseInt(year), parseInt(month) - 1, parseInt(day), 
+                        parseInt(hour), parseInt(minute), parseInt(second));
+        if (!isNaN(result.getTime())) {
+          return result;
+        }
+      } catch (error) {
+        console.warn('Error parsing DD/MM/YYYY format:', dateStr, error);
+      }
+    }
+    
+    // If all else fails, return current date to avoid breaking the sort
+    console.warn('Could not parse date:', dateValue, 'using current date as fallback');
+    return new Date();
+  }, []);
+  
+  // Sorting logic - sort first, then paginate
+  const sortedData = React.useMemo(() => {
+    if (!flowsTrace?.data || flowsTrace.data.length === 0) return [];
+    
+    // If no sort column specified, return data as-is
+    if (!sortColumn) return flowsTrace.data;
+
+    const sorted = [...flowsTrace.data].sort((a, b) => {
+      let aValue = a[sortColumn as keyof typeof a];
+      let bValue = b[sortColumn as keyof typeof b];
+
+      // Handle different field types
+      if (sortFieldType === "date") {
+        // Use the helper function to parse dates correctly
+        const aDate = parseDate(aValue);
+        const bDate = parseDate(bValue);
+        
+        // Compare using getTime() for more reliable date comparison
+        const aTime = aDate.getTime();
+        const bTime = bDate.getTime();
+        
+        if (aTime < bTime) return sortDirection === "asc" ? -1 : 1;
+        if (aTime > bTime) return sortDirection === "asc" ? 1 : -1;
+        return 0;
+      } else if (sortFieldType === "number") {
+        // Convert to numbers for proper numerical comparison
+        aValue = Number(aValue) as any;
+        bValue = Number(bValue) as any;
+      }
+      // For "string" type, use default comparison
+
+      if (aValue < bValue) return sortDirection === "asc" ? -1 : 1;
+      if (aValue > bValue) return sortDirection === "asc" ? 1 : -1;
+      return 0;
+    });
+    
+    if (sortFieldType === "date" && sorted.length > 0) {
+      sorted.slice(0, 3).map(item => ({
+        original: item[sortColumn as keyof typeof item],
+        parsed: parseDate(item[sortColumn as keyof typeof item]).toISOString()
+      }));
+    }
+
+    return sorted;
+  }, [sortColumn, sortDirection, sortFieldType, flowsTrace?.data, parseDate]);
+
   const handleNextPage = () => {
-    if (flowsTrace && currentPage * recordsPerPage < flowsTrace.data.length) {
+    if (sortedData && currentPage * recordsPerPage < sortedData.length) {
       setCurrentPage((prevPage) => prevPage + 1);
     }
   };
@@ -157,34 +255,38 @@ export const FlowsTraceComponent : React.FunctionComponent<IFlowsTraceComponent>
       setCurrentPage((prevPage) => prevPage - 1);
     }
   };
-
-  const paginatedData = flowsTrace?.data.slice(
-    (currentPage - 1) * recordsPerPage,
-    currentPage * recordsPerPage
-  );
-
-  // Sorting logic
-  const sortedData = React.useMemo(() => {
-    if (!sortColumn || !paginatedData) return paginatedData;
-
-    return [...paginatedData].sort((a, b) => {
-      const aValue = a[sortColumn as keyof typeof a];
-      const bValue = b[sortColumn as keyof typeof b];
-
-      if (aValue < bValue) return sortDirection === "asc" ? -1 : 1;
-      if (aValue > bValue) return sortDirection === "asc" ? 1 : -1;
-      return 0;
-    });
-  }, [recordsPerPage, sortColumn, sortDirection, paginatedData]);
+  
+  // Paginate the sorted data with useMemo for better control
+  const paginatedData = React.useMemo(() => {
+    if (!sortedData) return [];
+    
+    const startIndex = (currentPage - 1) * recordsPerPage;
+    const endIndex = currentPage * recordsPerPage;
+    const result = sortedData.slice(startIndex, endIndex);
+    
+    // Debug log for paginatedData
+    if (result.length > 0 && sortColumn === "DateExecution") {
+      result.forEach((item, index) => {
+        const parsedDate = parseDate(item.DateExecution);
+        const formattedForUI = new Intl.DateTimeFormat("es-ES", {
+          year: "numeric", month: "2-digit", day: "2-digit",
+          hour: "2-digit", minute: "2-digit", second: "2-digit",
+          hour12: false,
+        }).format(parsedDate).replace(",", "");
+      });
+    }
+    
+    return result;
+  }, [sortedData, currentPage, recordsPerPage, sortColumn, parseDate]);
 
   // Group rows by RunName for alternating background colors
   const getRowBackgroundClass = React.useMemo(() => {
-    if (!sortedData) return () => style.groupBackground2;
+    if (!paginatedData) return () => style.groupBackground2;
     
     const runNameGroups: { [key: string]: number } = {};
     let groupIndex = 0;
     
-    sortedData.forEach((flow) => {
+    paginatedData.forEach((flow) => {
       if (!(flow.RunName in runNameGroups)) {
         runNameGroups[flow.RunName] = groupIndex % 2;
         groupIndex++;
@@ -195,10 +297,10 @@ export const FlowsTraceComponent : React.FunctionComponent<IFlowsTraceComponent>
       const groupNumber = runNameGroups[runName];
       return groupNumber === 0 ? style.groupBackground1 : style.groupBackground2;
     };
-  }, [sortedData, style.groupBackground1, style.groupBackground2]);
+  }, [paginatedData, style.groupBackground1, style.groupBackground2]);
 
   // Handle column header click
-  const handleSort = (column: string) => {
+  const handleSort = (column: string, fieldType: "string" | "date" | "number" = "string") => {
     if (sortColumn === column) {
       // Toggle sort direction if the same column is clicked
       setSortDirection((prevDirection) => (prevDirection === "asc" ? "desc" : "asc"));
@@ -207,6 +309,10 @@ export const FlowsTraceComponent : React.FunctionComponent<IFlowsTraceComponent>
       setSortColumn(column);
       setSortDirection("asc");
     }
+    // Always update the field type
+    setSortFieldType(fieldType);
+    // Reset to first page when sorting changes
+    setCurrentPage(1);
   };
 
   const initIntervalMessagesLoading = () => {
@@ -227,10 +333,9 @@ export const FlowsTraceComponent : React.FunctionComponent<IFlowsTraceComponent>
     
     setSortColumn("RunName"); // Reset sort column
     setSortDirection("desc"); // Reset sort direction
+    setSortFieldType("string"); // Reset sort field type
 
     LoadFlows(value).then((flowsResponse) => {
-      console.log("Component reloaded");
-      //console.log("Flows : " + JSON.stringify(flowsResponse));
       setFlowsTrace(flowsResponse); 
       setSuccessLoading();
     })
@@ -241,8 +346,6 @@ export const FlowsTraceComponent : React.FunctionComponent<IFlowsTraceComponent>
       initIntervalMessagesLoading(); // Start loading messages
 
       LoadFlows(filterExecution).then((flowsResponse) => {
-        console.log("Component loaded");
-        //console.log("Flows : " + JSON.stringify(flowsResponse));
         setFlowsTrace(flowsResponse); 
         setSuccessLoading();
       })
@@ -306,17 +409,17 @@ export const FlowsTraceComponent : React.FunctionComponent<IFlowsTraceComponent>
           <Table aria-label="Flows Trace Table" style={{ minWidth: "510px", marginBottom: "16px" }} className={[style.noCaret].join(" ")}>
             <TableHeader>
               <TableRow>
-                <TableHeaderCell className={style.noCaret} style={{ width: "260px", cursor: "pointer" }} onClick={() => handleSort("RunName")}>Id {sortColumn === "RunName" && (sortDirection === "asc" ? "▲" : "▼")}</TableHeaderCell>
-                <TableHeaderCell className={style.noCaret} style={{ width: "150px", cursor: "pointer" }} onClick={() => handleSort("DateExecution")}>{translation.date} {sortColumn === "DateExecution" && (sortDirection === "asc" ? "▲" : "▼")}</TableHeaderCell>
-                <TableHeaderCell className={style.noCaret} style={{ width: "120px", cursor: "pointer" }} onClick={() => handleSort("Status")}>{translation.flowStatus} {sortColumn === "Status" && (sortDirection === "asc" ? "▲" : "▼")}</TableHeaderCell>
-                <TableHeaderCell className={style.noCaret} style={{ width: "auto", cursor: "pointer" }} onClick={() => handleSort("Name")}>{translation.flowName} {sortColumn === "Name" && (sortDirection === "asc" ? "▲" : "▼")}</TableHeaderCell>
-                <TableHeaderCell className={style.noCaret} style={{ width: "120px", cursor: "pointer" }} onClick={() => handleSort("ActionStatus")}>{translation.actionStatus} {sortColumn === "ActionStatus" && (sortDirection === "asc" ? "▲" : "▼")}</TableHeaderCell>
-                <TableHeaderCell className={style.noCaret} style={{ width: "auto", cursor: "pointer" }} onClick={() => handleSort("Action")}>{translation.action} {sortColumn === "Action" && (sortDirection === "asc" ? "▲" : "▼")}</TableHeaderCell>                
+                <TableHeaderCell className={style.noCaret} style={{ width: "260px", cursor: "pointer" }} onClick={() => handleSort("RunName", "string")}>Id {sortColumn === "RunName" && (sortDirection === "asc" ? "▲" : "▼")}</TableHeaderCell>
+                <TableHeaderCell className={style.noCaret} style={{ width: "150px", cursor: "pointer" }} onClick={() => handleSort("DateExecution", "date")}>{translation.date} {sortColumn === "DateExecution" && (sortDirection === "asc" ? "▲" : "▼")}</TableHeaderCell>
+                <TableHeaderCell className={style.noCaret} style={{ width: "120px", cursor: "pointer" }} onClick={() => handleSort("Status", "number")}>{translation.flowStatus} {sortColumn === "Status" && (sortDirection === "asc" ? "▲" : "▼")}</TableHeaderCell>
+                <TableHeaderCell className={style.noCaret} style={{ width: "auto", cursor: "pointer" }} onClick={() => handleSort("Name", "string")}>{translation.flowName} {sortColumn === "Name" && (sortDirection === "asc" ? "▲" : "▼")}</TableHeaderCell>
+                <TableHeaderCell className={style.noCaret} style={{ width: "120px", cursor: "pointer" }} onClick={() => handleSort("ActionStatus", "string")}>{translation.actionStatus} {sortColumn === "ActionStatus" && (sortDirection === "asc" ? "▲" : "▼")}</TableHeaderCell>
+                <TableHeaderCell className={style.noCaret} style={{ width: "auto", cursor: "pointer" }} onClick={() => handleSort("Action", "string")}>{translation.action} {sortColumn === "Action" && (sortDirection === "asc" ? "▲" : "▼")}</TableHeaderCell>                
                 <TableHeaderCell className={style.noCaret} style={{ width: "100px" }}>{translation.showExecution}</TableHeaderCell>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {(sortedData ?? []).map((flow) => (
+              {(paginatedData ?? []).map((flow) => (
                 <TableRow key={flow.Id_+Math.random().toString(36).substring(2, 15)} className={getRowBackgroundClass(flow.RunName)}>
                   <TableCell>
                     <TableCellLayout className={style.noCaret}>{flow.RunName}</TableCellLayout>
@@ -410,12 +513,12 @@ export const FlowsTraceComponent : React.FunctionComponent<IFlowsTraceComponent>
               </Button>
               <span>
                 {translation.page} {currentPage} {translation.of}
-                {Math.ceil((flowsTrace?.data.length || 0) / recordsPerPage)}
+                {Math.ceil((sortedData?.length || 0) / recordsPerPage)}
               </span>              
               <Button
                 onClick={handleNextPage}
                 disabled={
-                  flowsTrace && currentPage * recordsPerPage >= flowsTrace.data.length
+                  sortedData && currentPage * recordsPerPage >= sortedData.length
                 }
                 appearance="primary"
               >
