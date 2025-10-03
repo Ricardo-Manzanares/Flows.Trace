@@ -3,6 +3,7 @@ using FlowsTrace.API.Services;
 using FlowsTrace.Services.API;
 using Microsoft.Crm.Sdk.Messages;
 using Microsoft.Xrm.Sdk;
+using Microsoft.Xrm.Sdk.Query;
 using Newtonsoft.Json;
 using System;
 using System.Linq;
@@ -78,8 +79,9 @@ namespace FlowsTrace.API
                     _tracingService.Trace("FlowsTrace tenant_id " + environmentsValues.tenant_id);
 
                     var flows = dynamicsService.GetFlowsFromEnvironment();
-
-                    var flowService = new FlowService(environmentsValues.environment_url, environmentsValues.environment_id, environmentsValues.client_id, environmentsValues.client_secret, environmentsValues.tenant_id, _tracingService);
+                    var timeZoneUser = TimeZoneUser();
+                    _tracingService.Trace("FlowsTrace TimeZoneUser " + timeZoneUser);
+                    var flowService = new FlowService(timeZoneUser, environmentsValues.environment_url, environmentsValues.environment_id, environmentsValues.client_id, environmentsValues.client_secret, environmentsValues.tenant_id, _tracingService);
 
                     var flowsRunningFromRecord = flowService.GetFlowsFromRecord(parameters.record_id, flows, filter_range_execution);
 
@@ -97,6 +99,36 @@ namespace FlowsTrace.API
                 _tracingService.Trace("Execute error in FlowsTrace : " + ex.ToString());
                 throw new InvalidPluginExecutionException(ex.Message);
             }           
+        }
+
+        private string TimeZoneUser()
+        {
+            // 1. Obtener la configuración del usuario actual
+            var query = new QueryExpression("usersettings")
+            {
+                ColumnSet = new ColumnSet("timezonecode")
+            };
+            query.Criteria.AddCondition("systemuserid", ConditionOperator.Equal, _context.UserId);
+
+            var userSettings = _service.RetrieveMultiple(query).Entities.FirstOrDefault();
+            if (userSettings == null)
+                throw new InvalidPluginExecutionException("No se encontró la configuración de zona horaria del usuario");
+
+            var timeZoneCode = (int)userSettings["timezonecode"];
+
+            // 2. Resolver el nombre de la zona horaria a partir de timezonedefinition
+            var tzQuery = new QueryExpression("timezonedefinition")
+            {
+                ColumnSet = new ColumnSet("standardname")
+            };
+            tzQuery.Criteria.AddCondition("timezonecode", ConditionOperator.Equal, timeZoneCode);
+
+            var tzDef = _service.RetrieveMultiple(tzQuery).Entities.FirstOrDefault();
+            if (tzDef == null)
+                throw new InvalidPluginExecutionException("No se encontró la definición de zona horaria para el código " + timeZoneCode);
+
+            var standardName = tzDef.GetAttributeValue<string>("standardname");
+            return standardName;
         }
     }
 }

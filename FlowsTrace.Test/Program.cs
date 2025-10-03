@@ -5,6 +5,7 @@ using FlowsTrace.Services.API;
 using FlowsTrace.Test;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Xrm.Sdk;
+using Microsoft.Xrm.Sdk.Query;
 using System.Data;
 
 
@@ -41,13 +42,46 @@ foreach (var flow in flows)
     Console.WriteLine("Flow to validate "+ flow.Name);
 }
 
+var userId = "82fb0ac7-1bb7-ee11-a569-0022489c9f89"; // Usuario a validar
 
-var flowService = new FlowService(configuration["environment_url"].ToString(), configuration["environment_id"].ToString(), configuration["client_id"].ToString(), configuration["client_secret"].ToString(), configuration["tenant_id"].ToString(), null);
+string TimeZoneUser()
+{
+    // 1. Obtener la configuración del usuario actual
+    var query = new QueryExpression("usersettings")
+    {
+        ColumnSet = new ColumnSet("timezonecode")
+    };
+    query.Criteria.AddCondition("systemuserid", ConditionOperator.Equal, userId);
+
+    var userSettings = service.RetrieveMultiple(query).Entities.FirstOrDefault();
+    if (userSettings == null)
+        throw new InvalidPluginExecutionException("No se encontró la configuración de zona horaria del usuario");
+
+    var timeZoneCode = (int)userSettings["timezonecode"];
+
+    // 2. Resolver el nombre de la zona horaria a partir de timezonedefinition
+    var tzQuery = new QueryExpression("timezonedefinition")
+    {
+        ColumnSet = new ColumnSet("standardname")
+    };
+    tzQuery.Criteria.AddCondition("timezonecode", ConditionOperator.Equal, timeZoneCode);
+
+    var tzDef = service.RetrieveMultiple(tzQuery).Entities.FirstOrDefault();
+    if (tzDef == null)
+        throw new InvalidPluginExecutionException("No se encontró la definición de zona horaria para el código " + timeZoneCode);
+
+    var standardName = tzDef.GetAttributeValue<string>("standardname");
+    return standardName;
+}
+
+var timeZoneUser = TimeZoneUser();
+
+var flowService = new FlowService(timeZoneUser, configuration["environment_url"].ToString(), configuration["environment_id"].ToString(), configuration["client_id"].ToString(), configuration["client_secret"].ToString(), configuration["tenant_id"].ToString(), null);
 Enums.FilterRangeExecution filter = Enums.FilterRangeExecution.Today;
 
 Console.WriteLine("Filter apply " + filter.ToString());
 
-var flowsRunningFromRecord = flowService.GetFlowsFromRecord("14000e87-6210-f011-998a-6045bde0eb12", flows, filter);
+var flowsRunningFromRecord = flowService.GetFlowsFromRecord("f22405f3-d99f-f011-bbd2-000d3a674ede", flows, filter);
 
 Console.WriteLine("FlowsTrace.Test end..." + flowsRunningFromRecord.Count);
 

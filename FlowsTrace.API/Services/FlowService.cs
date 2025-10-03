@@ -2,6 +2,8 @@
 using FlowsTrace.API.Models.Flow;
 using FlowsTrace.Services.API;
 using Microsoft.Xrm.Sdk;
+using Microsoft.Xrm.Sdk.PluginTelemetry;
+using Microsoft.Xrm.Sdk.Query;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
@@ -27,14 +29,16 @@ namespace FlowsTrace.API.Services
         private string _client_id;
         private string _client_secret;
         private string _tenant_id;
+        private string _timeZoneUser;
         private ITracingService _tracingService;
 
         private const string _pathRunIdReplace = "/providers/Microsoft.ProcessSimple/";
         private const string _environmentRunIdReplace = "https://make.powerautomate.com/";
         private const string _pathRuns = "https://api.flow.microsoft.com/providers/Microsoft.ProcessSimple/environments";
 
-        public FlowService(string environment_url, string envionment_id, string client_id, string client_secret, string tenant_id, ITracingService tracingService)
+        public FlowService(string timeZoneUser, string environment_url, string envionment_id, string client_id, string client_secret, string tenant_id, ITracingService tracingService)
         {
+            _timeZoneUser = timeZoneUser;
             _environment_url = environment_url;
             _environment_id = envionment_id;
             _client_id = client_id;
@@ -59,35 +63,74 @@ namespace FlowsTrace.API.Services
                 if (_token != null)
                 {
                     //Get runs from flow
-                    
+
                     var parallelOptions = new ParallelOptions { MaxDegreeOfParallelism = 2 };
 
+                    var userTz = TimeZoneInfo.FindSystemTimeZoneById(_timeZoneUser);
+
+                    // 2. Hora actual UTC y local
+                    var nowUtc = DateTime.UtcNow;
+                    var nowLocal = TimeZoneInfo.ConvertTimeFromUtc(nowUtc, userTz);
+
+                    // 3. Filter end siempre en UTC
+                    var filterEnd = nowUtc.ToString("yyyy-MM-ddTHH:mm:ssZ");
+
                     var filterFrom = string.Empty;
-                    var filterEnd = DateTime.Now.ToLocalTime().ToString("yyyy-MM-ddTHH:mm:ssZ");
 
                     switch (filterRangeExecution)
                     {
                         case FilterRangeExecution.LastHalfHour:
-                            filterFrom = DateTime.Now.ToLocalTime().AddMinutes(-30).ToString("yyyy-MM-ddTHH:mm:ssZ");
+                            filterFrom = nowUtc.AddMinutes(-30).ToString("yyyy-MM-ddTHH:mm:ssZ");
                             break;
+
                         case FilterRangeExecution.LastHour:
-                            filterFrom = DateTime.Now.ToLocalTime().AddMinutes(-60).ToString("yyyy-MM-ddTHH:mm:ssZ");
+                            filterFrom = nowUtc.AddHours(-1).ToString("yyyy-MM-ddTHH:mm:ssZ");
                             break;
+
                         case FilterRangeExecution.Today:
-                            filterFrom = DateTime.Now.ToLocalTime().ToString("yyyy-MM-ddT00:00:00Z");
+                            {
+                                var todayLocal = new DateTime(nowLocal.Year, nowLocal.Month, nowLocal.Day, 0, 0, 0, DateTimeKind.Unspecified);
+                                var todayUtc = TimeZoneInfo.ConvertTimeToUtc(todayLocal, userTz);
+                                filterFrom = todayUtc.ToString("yyyy-MM-ddTHH:mm:ssZ");
+                            }
                             break;
+
                         case FilterRangeExecution.Yesterday:
-                            filterFrom = DateTime.Now.ToLocalTime().AddDays(-1).ToString("yyyy-MM-ddT00:00:00Z");
+                            {
+                                var yesterdayLocal = new DateTime(nowLocal.Year, nowLocal.Month, nowLocal.Day, 0, 0, 0, DateTimeKind.Unspecified).AddDays(-1);
+                                var yesterdayUtc = TimeZoneInfo.ConvertTimeToUtc(yesterdayLocal, userTz);
+                                filterFrom = yesterdayUtc.ToString("yyyy-MM-ddTHH:mm:ssZ");
+                            }
                             break;
+
                         case FilterRangeExecution.Last48Hours:
-                            filterFrom = DateTime.Now.ToLocalTime().AddDays(-2).ToString("yyyy-MM-ddT00:00:00Z");
+                            {
+                                // Arranca desde "hace 2 días a medianoche local"
+                                var baseLocal = new DateTime(nowLocal.Year, nowLocal.Month, nowLocal.Day, 0, 0, 0, DateTimeKind.Unspecified).AddDays(-2);
+                                var baseUtc = TimeZoneInfo.ConvertTimeToUtc(baseLocal, userTz);
+                                filterFrom = baseUtc.ToString("yyyy-MM-ddTHH:mm:ssZ");
+                            }
                             break;
+
                         case FilterRangeExecution.SinceLastWeek:
-                            filterFrom = DateTime.Now.ToLocalTime().AddDays(-7).ToString("yyyy-MM-ddT00:00:00Z");
+                            {
+                                // Arranca desde "hace 7 días a medianoche local"
+                                var baseLocal = new DateTime(nowLocal.Year, nowLocal.Month, nowLocal.Day, 0, 0, 0, DateTimeKind.Unspecified).AddDays(-7);
+                                var baseUtc = TimeZoneInfo.ConvertTimeToUtc(baseLocal, userTz);
+                                filterFrom = baseUtc.ToString("yyyy-MM-ddTHH:mm:ssZ");
+                            }
                             break;
+
                         default:
-                            throw new InvalidEnumArgumentException("DynamicsService - GetFlowsFromRecord : FilterRangeExecution not valid");
-                            break;
+                            throw new InvalidEnumArgumentException(
+                                "DynamicsService - GetFlowsFromRecord : FilterRangeExecution not valid"
+                            );
+                    }
+
+                    if (_tracingService != null)
+                    {
+                        _tracingService.Trace("DynamicsService - GetFlowsFromRecord : Filter from : " + filterFrom);
+                        _tracingService.Trace("DynamicsService - GetFlowsFromRecord : Filter end : " + filterEnd);
                     }
 
                     Parallel.ForEach(flows, parallelOptions, flow =>
@@ -161,7 +204,7 @@ namespace FlowsTrace.API.Services
                     System.Diagnostics.Trace.WriteLine(error);
                 throw;
             }
-        }
+        }        
 
         private void ValidateMessage (HttpResponseMessage messege, string recordId, FlowRunsReponseValue run, FlowTraceResponse flow, List<FlowTraceResponse> flowsResult, string actionName = null, CustomAction action = null)
         {
@@ -182,36 +225,6 @@ namespace FlowsTrace.API.Services
                         {
                             switch (node)
                             {
-                                case "headers":
-                                    if(actionName == null)
-                                    {
-                                        //Example :     "x-ms-ppapi-forwarded-path": "/powerautomate/automations/direct/workflows/89a57fcf85824377a6a1fbf0e14dcb96/triggers/Campo_de_comunicaci%C3%B3n/versions/08584445499516133574/run",
-                                        var pathAction = jsonObject[node].Children().ToList().Where(h => h.Path == "headers.x-ms-ppapi-forwarded-path").FirstOrDefault();
-                                        if(pathAction != null)
-                                        {
-                                            //Decode path 7th position is action name
-                                            actionName = WebUtility.UrlDecode(pathAction.ToString()).Split('/')[7];
-
-                                            if (actionName != null)
-                                            {
-                                                FlowTraceResponse flowNew = new FlowTraceResponse();
-                                                flowNew.Status = flow.Status;
-                                                flowNew.Id = flow.Id;
-                                                flowNew.WorkflowId = flow.WorkflowId;
-                                                flowNew.Name = flow.Name;
-                                                flowNew.DateExecution = run.properties.startTime;
-
-                                                flowNew.RunStatus = Enum.TryParse(run.properties.status, out FlowRunStatus statusRunFlow) ? statusRunFlow : FlowRunStatus.Unknown;
-                                                flowNew.RunId = run.id.Replace(_pathRunIdReplace, _environmentRunIdReplace);
-                                                flowNew.RunName = run.name;
-                                                flowNew.Action = actionName;
-                                                flowNew.ActionStatus = FlowRunStatus.Succeeded;
-                                                flowNew.DateExecution = run.properties.startTime;
-                                                flowsResult.Add(flowNew);
-                                            }
-                                        }
-                                    }
-                                    break;
                                 case "variables":
                                     properties = FilterProperties(jsonObject[node].Children().ToList().Children().ToList());
                                     break;
@@ -244,12 +257,13 @@ namespace FlowsTrace.API.Services
                                 flowNew.WorkflowId = flow.WorkflowId;
                                 flowNew.Name = flow.Name;
                                 flowNew.DateExecution = run.properties.startTime;
-
+                                flowNew.RunStatus = Enum.TryParse(run.properties.status, out FlowRunStatus statusRunFlow) ? statusRunFlow : FlowRunStatus.Unknown;
+                                flowNew.RunId = run.id.Replace(_pathRunIdReplace, _environmentRunIdReplace);
+                                flowNew.RunName = run.name;
+                                flowNew.DateExecution = run.properties.startTime;
                                 if (actionName != null && action != null)
                                 {
-                                    flowNew.RunStatus = Enum.TryParse(run.properties.status, out FlowRunStatus statusRunFlow) ? statusRunFlow : FlowRunStatus.Unknown;
-                                    flowNew.RunId = run.id.Replace(_pathRunIdReplace, _environmentRunIdReplace);
-                                    flowNew.RunName = run.name;
+                                   
                                     flowNew.Action = actionName;
                                     flowNew.ActionStatus = Enum.TryParse(action.status, out FlowRunStatus statusAction) ? statusAction : FlowRunStatus.Unknown;
                                     flowNew.DateExecution = action.startTime;
@@ -284,8 +298,6 @@ namespace FlowsTrace.API.Services
                 "api",
                 "apiVersion",
                 "authentication",
-                "createdon@OData.Community.Display.V1.FormattedValue",
-                "createdon",
                 "modifiedon@OData.Community.Display.V1.FormattedValue",
                 "modifiedon",
                 "statecode@OData.Community.Display.V1.FormattedValue",

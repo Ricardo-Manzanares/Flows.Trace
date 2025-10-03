@@ -100,7 +100,7 @@ export const FlowsTraceComponent : React.FunctionComponent<IFlowsTraceComponent>
   const [recordsPerPage, setRecordsPerPage] = React.useState(10); // Default to 10 records per page
   const [filterExecution, setFilterExecution] = React.useState<FilterExecutions>(FilterExecutions.LastHour); // Default to LastHour
   const [currentPage, setCurrentPage] = React.useState(1);
-  const [sortColumn, setSortColumn] = React.useState<string | null>("RunName"); // Default to DateExecution
+  const [sortColumn, setSortColumn] = React.useState<string | null>("DateExecution"); // Default to DateExecution
   const [sortDirection, setSortDirection] = React.useState<"asc" | "desc">("desc");// Default to descending order
   const [sortFieldType, setSortFieldType] = React.useState<"string" | "date" | "number">("string");
   const [loadingMessage, setLoadingMessage] = React.useState(messagesLoading[0]); // Default message
@@ -280,24 +280,34 @@ export const FlowsTraceComponent : React.FunctionComponent<IFlowsTraceComponent>
   }, [sortedData, currentPage, recordsPerPage, sortColumn, parseDate]);
 
   // Group rows by RunName for alternating background colors
-  const getRowBackgroundClass = React.useMemo(() => {
-    if (!paginatedData) return () => style.groupBackground2;
+  const getRowBackgroundStyle = React.useMemo(() => {
+    if (!paginatedData || paginatedData.length === 0) {
+      return () => ({});
+    }
     
-    const runNameGroups: { [key: string]: number } = {};
-    let groupIndex = 0;
+    // Count occurrences of each RunName in current page
+    const runNameCounts: { [key: string]: number } = {};
+    paginatedData.forEach(flow => {
+      runNameCounts[flow.RunName] = (runNameCounts[flow.RunName] || 0) + 1;
+    });
     
-    paginatedData.forEach((flow) => {
-      if (!(flow.RunName in runNameGroups)) {
-        runNameGroups[flow.RunName] = groupIndex % 2;
-        groupIndex++;
-      }
+    // Get unique RunNames that appear more than once (need grouping)
+    const duplicateRunNames = Object.keys(runNameCounts)
+      .filter(runName => runNameCounts[runName] > 1)
+      .sort();
+    
+    // Assign alternating colors to duplicate RunNames using inline styles
+    const runNameStyles: { [key: string]: React.CSSProperties } = {};
+    duplicateRunNames.forEach((runName, index) => {
+      runNameStyles[runName] = {
+        backgroundColor: index % 2 === 0 ? "rgba(0, 120, 212, 0.50)" : "rgba(255, 193, 7, 0.30)"
+      };
     });
     
     return (runName: string) => {
-      const groupNumber = runNameGroups[runName];
-      return groupNumber === 0 ? style.groupBackground1 : style.groupBackground2;
+      return runNameStyles[runName] || {};
     };
-  }, [paginatedData, style.groupBackground1, style.groupBackground2]);
+  }, [paginatedData]);
 
   // Handle column header click
   const handleSort = (column: string, fieldType: "string" | "date" | "number" = "string") => {
@@ -331,7 +341,7 @@ export const FlowsTraceComponent : React.FunctionComponent<IFlowsTraceComponent>
     setLoading(true); // Show loading indicator
     setCurrentPage(1); // Reset to first page
     
-    setSortColumn("RunName"); // Reset sort column
+    setSortColumn("DateExecution"); // Reset sort column
     setSortDirection("desc"); // Reset sort direction
     setSortFieldType("string"); // Reset sort field type
 
@@ -420,7 +430,7 @@ export const FlowsTraceComponent : React.FunctionComponent<IFlowsTraceComponent>
             </TableHeader>
             <TableBody>
               {(paginatedData ?? []).map((flow) => (
-                <TableRow key={flow.Id_+Math.random().toString(36).substring(2, 15)} className={getRowBackgroundClass(flow.RunName)}>
+                <TableRow key={flow.Id_+Math.random().toString(36).substring(2, 15)} style={getRowBackgroundStyle(flow.RunName)}>
                   <TableCell>
                     <TableCellLayout className={style.noCaret}>{flow.RunName}</TableCellLayout>
                   </TableCell>
@@ -469,6 +479,7 @@ export const FlowsTraceComponent : React.FunctionComponent<IFlowsTraceComponent>
                   </TableCell>
                   <TableCell>
                     <TableCellLayout className={style.noCaret}>
+                      {flow.Action !== null && flow.Action !== undefined ?
                       <Badge
                         appearance="filled"
                         shape="rounded"
@@ -489,6 +500,8 @@ export const FlowsTraceComponent : React.FunctionComponent<IFlowsTraceComponent>
                         {actionStatusMapping[flow.ActionStatus as keyof typeof actionStatusMapping]?.label ||
                           actionStatusMapping.default.label}
                       </Badge>
+                      : <></>
+                      }
                     </TableCellLayout>
                   </TableCell>         
                   <TableCell>
